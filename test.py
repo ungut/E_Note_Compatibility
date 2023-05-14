@@ -18,10 +18,7 @@ ciphertext = plist[0][12:-16]
 print(f"{len(tag) + len(nonce) + len(ciphertext)}")
 #passi = SHA256.hash(bytes("aa+bb", "utf-8"))
 pass_word = SHA256.new(b64encode("aabb".encode("utf-8"))).digest()
-print(pass_word.hex(':'))
-salt = get_random_bytes(32)
-key = PBKDF2("aabb", salt, 32, count=1000000, hmac_hash_module=SHA256)
-#print((key))
-encobj = AES.new(key,  AES.MODE_GCM, nonce)
+encobj = AES.new(pass_word,  AES.MODE_GCM, nonce)
 dd = encobj.decrypt_and_verify(ciphertext, tag)
-
+print(dd)
+#E0pSoiwAW5SLBAPFOmOa+qL7Tj8uw3t6ofvTxZPNjMI=
