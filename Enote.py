@@ -7,10 +7,24 @@ from base64 import b64encode
 import tkinter as tk
 from tkinter.filedialog import askopenfilename
 from PIL import Image, ImageTk
+import json
 
+enote_items = []
 BG_COLOR = "#346466"
 WIN_WIDTH = 600
 WIN_HEIGHT = 600
+
+def import_enote_items():
+    tk.Tk().withdraw()
+    filename = askopenfilename()
+    dd = read_enote_file(filename,username="aa",password="bb")
+    id_enote = dd["id"]
+    enote_items = dd["items"]
+    for dict in enote_items:
+        dd = {str:str}
+        item = dict["item"]
+        for key in item:
+            print(f"{key} = {item[key]} \n")
 
 
 def read_enote_file(filename, username, password):
@@ -24,8 +38,9 @@ def read_enote_file(filename, username, password):
     ciphertext = plist[0][12:-16]
     pass_word = SHA256.new(b64encode((username + password).encode("utf-8"))).digest()
     encobj = AES.new(pass_word, AES.MODE_GCM, nonce)
-    dd = encobj.decrypt_and_verify(ciphertext, tag)
-    # print(dd)
+   
+    return json.loads(encobj.decrypt_and_verify(ciphertext, tag))
+    
 
 
 root = tk.Tk()
@@ -57,8 +72,6 @@ logo_widget = tk.Label(master_frame, image=logo_image, bg="#346466")
 logo_widget.image = logo_image
 logo_widget.pack(anchor="w")
 
+import_enote_items()
 
-# tk.Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
-# filename = askopenfilename() # show an "Open" dialog box and return the path to the selected file
-# read_enote_file(filename,username="aa",password="bb")
 root.mainloop()
