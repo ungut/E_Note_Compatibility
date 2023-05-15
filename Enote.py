@@ -75,11 +75,11 @@ def write_enote_items(items,filename, username, password)->bytes:
     pass_word = SHA256.new(b64encode((username + password).encode("utf-8"))).digest()
     cipher = AES.new(pass_word, AES.MODE_GCM, nonce)
     ciphertext, tag = cipher.encrypt_and_digest(data)
-    #print(' '.join('{:02x}'.format(x) for x in nonce)) 
-    #print(f"Secongary decrypted_data_len = {tag}")
-
+    print(' '.join('{:02x}'.format(x) for x in nonce)) 
+    print(' '.join('{:02x}'.format(x) for x in tag))
     encrypted_data = cipher.nonce + ciphertext + tag
-    print(' '.join('{:02d}'.format(x) for x in encrypted_data[0:12])) 
+    print(' '.join('{:02x}'.format(x) for x in encrypted_data[0:12])) 
+    print(' '.join('{:02x}'.format(x) for x in encrypted_data[-16:])) 
  
     try:
         writePlist(encrypted_data, filename)
