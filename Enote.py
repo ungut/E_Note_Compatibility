@@ -8,24 +8,42 @@ import tkinter as tk
 from tkinter.filedialog import askopenfilename
 from PIL import Image, ImageTk
 import json
-
-enote_items = []
+import uuid
+import sys
 BG_COLOR = "#346466"
 WIN_WIDTH = 600
 WIN_HEIGHT = 600
 
-def import_enote_items():
+def import_enote_items_struct()->{}:
     tk.Tk().withdraw()
     filename = askopenfilename()
-    dd = read_enote_file(filename,username="aa",password="bb")
-    id_enote = dd["id"]
-    enote_items = dd["items"]
-    for dict in enote_items:
-        dd = {str:str}
-        item = dict["item"]
-        for key in item:
-            print(f"{key} = {item[key]} \n")
+    encrypted_data = read_enote_file(filename,username="aa",password="bb")
+    return  get_enote_items(encrypted_data)
+    
+def pack_enote_items(items:[{}]):
+    id = f"{uuid.uuid1()}"
+    dict2 = []
+    for dict in items:
+        dict3 = {"id":f"{uuid.uuid1()}"}
+        for key in dict:
+            dict3[key] = dict[key]
+        dict2.append(dict3)
+    ss = {"id":id,"items":dict2}
+    #print(ss)
+    return ss
 
+def get_enote_items(data)-> [{str:str}]:
+    enote_items = []
+    for key in data:
+        if key == "id":
+            id_enote = data[key]
+        else:
+            for dict in data[key]:
+                enote_items.append(dict["item"])
+        
+        
+        
+    return enote_items  
 
 def read_enote_file(filename, username, password):
     try:
@@ -36,10 +54,41 @@ def read_enote_file(filename, username, password):
     nonce = plist[0][0:12]
     tag = plist[0][-16:]
     ciphertext = plist[0][12:-16]
+    #print(f"original cyphertext = {len(ciphertext)}")
     pass_word = SHA256.new(b64encode((username + password).encode("utf-8"))).digest()
-    encobj = AES.new(pass_word, AES.MODE_GCM, nonce)
-   
-    return json.loads(encobj.decrypt_and_verify(ciphertext, tag))
+    cipher = AES.new(pass_word, AES.MODE_GCM, nonce)
+    decrypted_cyphertext = cipher.decrypt_and_verify(ciphertext, tag)
+    print(f"original decrypted_cyphertext_length = {len(decrypted_cyphertext)}")
+    print(f"original decrypted_cyphertext = {decrypted_cyphertext}")
+    decrypted_data = json.loads(decrypted_cyphertext)
+    #print("The size of the dictionary is {} bytes".format(sys.getsizeof(decrypted_data)))
+    return decrypted_data
+    
+def write_enote_items(items,filename, username, password)->bytes:
+    gg = pack_enote_items(items)
+    #print("The size of the dictionary is {} bytes".format(sys.getsizeof(gg)))
+    data = bytes(json.dumps(gg),"utf-8")
+    print(f"later decrypted_cyphertext_length = {len(data)}")
+    print(f"later decrypted_cyphertext = {data}")
+
+    nonce = os.urandom(12)
+    pass_word = SHA256.new(b64encode((username + password).encode("utf-8"))).digest()
+    cipher = AES.new(pass_word, AES.MODE_GCM, nonce)
+    ciphertext, tag = cipher.encrypt_and_digest(data)
+    #print(' '.join('{:02x}'.format(x) for x in nonce)) 
+    #print(f"Secongary decrypted_data_len = {tag}")
+
+    encrypted_data = cipher.nonce + ciphertext + tag
+    print(' '.join('{:02d}'.format(x) for x in encrypted_data[0:12])) 
+ 
+    try:
+        writePlist(encrypted_data, filename)
+    except(InvalidPlistException, NotBinaryPlistException):
+        print("Not a plist:")
+
+
+
+    return encrypted_data
     
 
 
@@ -72,6 +121,13 @@ logo_widget = tk.Label(master_frame, image=logo_image, bg="#346466")
 logo_widget.image = logo_image
 logo_widget.pack(anchor="w")
 
-import_enote_items()
+
+
+items = import_enote_items_struct()
+write_enote_items(items, "dummy.enote", "aa", "bb")
+# for item in items:
+#     for key in item:
+#         print(f"{key} = {item[key]} \n")
+#print(pack_enote_items(items))
 
 root.mainloop()
