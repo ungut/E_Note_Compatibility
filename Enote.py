@@ -115,8 +115,8 @@ logo_widget.pack(anchor="w")
 
 
 items = import_enote_items_struct()
-write_enote_items(items, "dummy.enote", "aa", "bb")
-read_enote_file("dummy.enote", "aa", "bb")
+#write_enote_items(items, "dummy.enote", "aa", "bb")
+#  read_enote_file("dummy.enote", "aa", "bb")
 # for item in items:
 #     for key in item:
 #         print(f"{key} = {item[key]} \n")
