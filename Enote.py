@@ -12,6 +12,8 @@ import json
 import uuid
 import sys
 from tkmacosx import Button
+from tkinter.ttk import Style
+
 BG_COLOR = "#346466"
 WIN_WIDTH = 600
 WIN_HEIGHT = 600
@@ -94,25 +96,6 @@ master_frame = tk.Frame(root, width=WIN_WIDTH / 3, height=WIN_HEIGHT, bg=BG_COLO
 master_frame.pack(side="left", fill="y", expand=0)
 master_frame.pack_propagate(False)
 
-master_canvas = tk.Canvas(master_frame)
-master_canvas.pack(side="left",fill="both",expand=1)
-
-#Add A Scrollbar To The Canvas
-master_scrollbar =  ttk.Scrollbar(root,orient="vertical",command=master_canvas.yview,bg=BG_COLOR)
-master_scrollbar.pack(side="left",fill="y")
-
-#Configure The Canvas
-master_canvas.configure(yscrollcommand=master_scrollbar.set)
-master_canvas.bind("<Configure>",lambda e:  master_canvas.configure(scrollregion=master_canvas.bbox("all")))
-
-#Create A Second Frame INSIADE The Canvas
-second_frame = tk.Frame(master_canvas)
-
-#Add That Frame To a Window In The Canvas
-master_canvas.create_window((0,0),window=second_frame,anchor="nw")
-
-
-
 detail_frame = tk.Frame(
     root,
     width=WIN_WIDTH,
@@ -121,13 +104,32 @@ detail_frame = tk.Frame(
     highlightbackground="green",
     highlightthickness=2,
 )
-def load_detail_frame():
-    print("hello")
 
-
-detail_frame.pack(side="left",fill="both",expand="yes")
 detail_frame.pack_propagate(False)
+detail_frame.pack(side="right",fill="both",expand="yes")
+master_canvas = tk.Canvas(master_frame)
+detail_canvas = tk.Canvas(detail_frame)
+master_canvas.pack(side="left",fill="both",expand=1)
+detail_canvas.pack(side="left",fill="both",expand=1)
 
+#Add A Scrollbar To The Canvas
+master_scrollbar =  ttk.Scrollbar(root,orient="vertical",command=master_canvas.yview)
+master_scrollbar.pack(side="right",fill="y",padx=10,pady=10)
+detail_scrollbar =  ttk.Scrollbar(detail_frame,orient="vertical",command=detail_canvas.yview)
+detail_scrollbar.pack(side="right",fill="y",padx=10,pady=10)
+
+#Configure The Canvas
+master_canvas.configure(yscrollcommand=master_scrollbar.set)
+master_canvas.bind("<Configure>",lambda e:  master_canvas.configure(scrollregion=master_canvas.bbox("all")))
+detail_canvas.configure(yscrollcommand=detail_scrollbar.set)
+detail_canvas.bind("<Configure>",lambda e:  detail_canvas.configure(scrollregion=detail_canvas.bbox("all")))
+
+#Create A Second Frame INSIADE The Canvas
+second_frame = tk.Frame(master_canvas)
+second_detail_frame = tk.Frame(detail_canvas)
+#Add That Frame To a Window In The Canvas
+master_canvas.create_window((0,0),window=second_frame,anchor="nw")
+detail_canvas.create_window((0,0),window=second_detail_frame,anchor="nw")
 
 img = Image.open("Icon1024.jpeg")
 resized_image = img.resize((30, 30), Image.LANCZOS)
@@ -135,6 +137,19 @@ logo_image = ImageTk.PhotoImage(resized_image)
 logo_widget = tk.Label(master_frame, image=logo_image, bg="#346466")
 logo_widget.image = logo_image
 #logo_widget.pack(anchor="w")
+
+
+def load_detail_frame():
+   print("hello")
+
+
+def set_detail_Viev():
+    for i in range(100):
+       w = tk.Text(second_detail_frame, height=1, borderwidth=0)
+       w.insert(1.0, "Hello World")
+       w.grid(row=i,column=0)
+
+
 def generate_master_view(items):
     for i,item in enumerate(items):
         text = item["Title"]
@@ -156,11 +171,7 @@ def generate_master_view(items):
 
 items = import_enote_items_struct()
 generate_master_view(items)
+set_detail_Viev()
 #write_enote_items(items, "dummy.enote", "aa", "bb")
-#  read_enote_file("dummy.enote", "aa", "bb")
-# for item in items:
-#     for key in item:
-#         print(f"{key} = {item[key]} \n")
-#print(pack_enote_items(items))
 
 root.mainloop()
