@@ -13,31 +13,37 @@ import uuid
 import sys
 from tkmacosx import Button
 from tkinter.ttk import Style
+from fpdf import FPDF
+import unicodedata
+
 
 BG_COLOR = "#346466"
 WIN_WIDTH = 600
-WIN_HEIGHT = 600
+WIN_HEIGHT = 800
 
-def import_enote_items_struct()->{}:
+
+def import_enote_items_struct() -> {}:
     tk.Tk().withdraw()
     filename = askopenfilename()
-    encrypted_data = read_enote_file(filename,username="aa",password="bb")
-    return  get_enote_items(encrypted_data)
-    
-def pack_enote_items(items:[{}]):
+    encrypted_data = read_enote_file(filename, username="aa", password="bb")
+    return get_enote_items(encrypted_data)
+
+
+def pack_enote_items(items: [{}]):
     id = f"{uuid.uuid1()}"
     dict2 = []
     for dict in items:
         dict4 = {}
         for key in dict:
             dict4[key] = dict[key]
-        dict3 = {"id":f"{uuid.uuid1()}","item":dict4}
+        dict3 = {"id": f"{uuid.uuid1()}", "item": dict4}
         dict2.append(dict3)
-    ss = {"id":id,"items":dict2}
-    #print(ss)
+    ss = {"id": id, "items": dict2}
+    # print(ss)
     return ss
 
-def get_enote_items(data)-> [{str:str}]:
+
+def get_enote_items(data) -> [{str: str}]:
     enote_items = []
     for key in data:
         if key == "id":
@@ -45,10 +51,9 @@ def get_enote_items(data)-> [{str:str}]:
         else:
             for dict in data[key]:
                 enote_items.append(dict["item"])
-        
-        
-        
-    return enote_items  
+
+    return enote_items
+
 
 def read_enote_file(filename, username, password):
     try:
@@ -62,36 +67,34 @@ def read_enote_file(filename, username, password):
     cipher = AES.new(pass_word, AES.MODE_GCM, nonce)
     decrypted_cyphertext = cipher.decrypt_and_verify(ciphertext, tag)
     decrypted_data = json.loads(decrypted_cyphertext)
-    #print("The size of the dictionary is {} bytes".format(sys.getsizeof(decrypted_data)))
+    # print("The size of the dictionary is {} bytes".format(sys.getsizeof(decrypted_data)))
     return decrypted_data
-    
-def write_enote_items(items,filename, username, password)->bytes:
+
+
+def write_enote_items(items, filename, username, password) -> bytes:
     gg = pack_enote_items(items)
-    data = bytes(json.dumps(gg),"utf-8")
+    data = bytes(json.dumps(gg), "utf-8")
     nonce = os.urandom(12)
     pass_word = SHA256.new(b64encode((username + password).encode("utf-8"))).digest()
     cipher = AES.new(pass_word, AES.MODE_GCM, nonce)
     ciphertext, tag = cipher.encrypt_and_digest(data)
-    #print(' '.join('{:02d}'.format(x) for x in nonce)) 
+    # print(' '.join('{:02d}'.format(x) for x in nonce))
     hint = "Kus Memleket numara".encode("utf-8")
     dd = cipher.nonce + ciphertext + tag
-    encrypted_data = [dd,hint]
+    encrypted_data = [dd, hint]
     try:
         writePlist(encrypted_data, filename)
-    except(InvalidPlistException, NotBinaryPlistException):
+    except (InvalidPlistException, NotBinaryPlistException):
         print("Not a plist:")
 
-
-
     return encrypted_data
-    
 
 
 root = tk.Tk()
 root.title("Enote")
 root.eval("tk::PlaceWindow . center")
 
-#çreate a Canvas
+# çreate a Canvas
 master_frame = tk.Frame(root, width=WIN_WIDTH / 3, height=WIN_HEIGHT, bg=BG_COLOR)
 master_frame.pack(side="left", fill="y", expand=0)
 master_frame.pack_propagate(False)
@@ -106,72 +109,165 @@ detail_frame = tk.Frame(
 )
 
 detail_frame.pack_propagate(False)
-detail_frame.pack(side="right",fill="both",expand="yes")
+detail_frame.pack(side="right", fill="both", expand="yes")
 master_canvas = tk.Canvas(master_frame)
 detail_canvas = tk.Canvas(detail_frame)
-master_canvas.pack(side="left",fill="both",expand=1)
-detail_canvas.pack(side="left",fill="both",expand=1)
+master_canvas.pack(side="left", fill="both", expand=1)
+detail_canvas.pack(side="left", fill="both", expand=1)
 
-#Add A Scrollbar To The Canvas
-master_scrollbar =  ttk.Scrollbar(root,orient="vertical",command=master_canvas.yview)
-master_scrollbar.pack(side="right",fill="y",padx=10,pady=10)
-detail_scrollbar =  ttk.Scrollbar(detail_frame,orient="vertical",command=detail_canvas.yview)
-detail_scrollbar.pack(side="right",fill="y",padx=10,pady=10)
+# Add A Scrollbar To The Canvas
+master_scrollbar = ttk.Scrollbar(root, orient="vertical", command=master_canvas.yview)
+master_scrollbar.pack(side="right", fill="y", padx=10, pady=10)
+detail_scrollbar = ttk.Scrollbar(
+    detail_frame, orient="vertical", command=detail_canvas.yview
+)
+detail_scrollbar.pack(side="right", fill="y", padx=10, pady=10)
 
-#Configure The Canvas
+# Configure The Canvas
 master_canvas.configure(yscrollcommand=master_scrollbar.set)
-master_canvas.bind("<Configure>",lambda e:  master_canvas.configure(scrollregion=master_canvas.bbox("all")))
+master_canvas.bind(
+    "<Configure>",
+    lambda e: master_canvas.configure(scrollregion=master_canvas.bbox("all")),
+)
 detail_canvas.configure(yscrollcommand=detail_scrollbar.set)
-detail_canvas.bind("<Configure>",lambda e:  detail_canvas.configure(scrollregion=detail_canvas.bbox("all")))
+detail_canvas.bind(
+    "<Configure>",
+    lambda e: detail_canvas.configure(scrollregion=detail_canvas.bbox("all")),
+)
 
-#Create A Second Frame INSIADE The Canvas
+# Create A Second Frame INSIADE The Canvas
 second_frame = tk.Frame(master_canvas)
 second_detail_frame = tk.Frame(detail_canvas)
-#Add That Frame To a Window In The Canvas
-master_canvas.create_window((0,0),window=second_frame,anchor="nw")
-detail_canvas.create_window((0,0),window=second_detail_frame,anchor="nw")
+# Add That Frame To a Window In The Canvas
+master_canvas.create_window((0, 0), window=second_frame, anchor="nw")
+detail_canvas.create_window((0, 0), window=second_detail_frame, anchor="nw")
 
 img = Image.open("Icon1024.jpeg")
 resized_image = img.resize((30, 30), Image.LANCZOS)
 logo_image = ImageTk.PhotoImage(resized_image)
 logo_widget = tk.Label(master_frame, image=logo_image, bg="#346466")
 logo_widget.image = logo_image
-#logo_widget.pack(anchor="w")
+# logo_widget.pack(anchor="w")
 
 
-def load_detail_frame():
-   print("hello")
+def set_detail_Viev(index):
+    for widgets in second_detail_frame.winfo_children():
+        widgets.destroy()
+    for key in items[index]:
+        nn = 0
+        i = 0
+
+        match key:
+            case "Title":
+                i = 0
+            case "URL":
+                i = 1
+            case "UserName":
+                i = 2
+            case "Password":
+                i = 3
+            case "PIN":
+                i = 4
+            case "Parola":
+                i = 5
+            case "Notes":
+                i = 6
+            case _:
+                i = nn + 7
+                nn += 1
+        text = items[index][key]
+        height = text.splitlines()
+        w = tk.Text(second_detail_frame, borderwidth=3, font=("TkHeadingFont", 15))
+        w.config(height=max(3, len(height)))
+        w.insert(1.0, text)
+        w.grid(row=i, column=1, sticky="nwse", columnspan=10)
+        tk.Label(second_detail_frame, text=key).grid(row=i, column=0, sticky="w")
 
 
-def set_detail_Viev():
-    for i in range(100):
-       w = tk.Text(second_detail_frame, height=1, borderwidth=0)
-       w.insert(1.0, "Hello World")
-       w.grid(row=i,column=0)
+def generate_master_button(item, index):
+    text = item["Title"]
+    Button(
+        second_frame,
+        text=text,
+        width=(master_frame.winfo_width() - 10),
+        anchor="w",
+        font=("TkHeadingFont", 15),
+        bg="#28393a",
+        fg="white",
+        cursor="hand2",
+        activebackground="#badee2",
+        activeforeground="black",
+        command=lambda: set_detail_Viev(index),
+    ).grid(row=index + 2, column=0, sticky="w", pady=5)
 
 
-def generate_master_view(items):
-    for i,item in enumerate(items):
-        text = item["Title"]
-        Button(
-            second_frame,
-            text= text,
-            width=(master_frame.winfo_width()-10),
-            anchor="w",
-            font=("TkHeadingFont",15),
-            bg="#28393a",
-            fg="white",
-            cursor="hand2",
-            activebackground="#badee2",
-            activeforeground="black",
-            command = lambda: load_detail_frame()
-        ).grid(row=i+2,column=0,sticky="w",pady=5)
+def convert_to_pdf():
+    # save FPDF() class into a
+    # variable pdf
+    pdf = FPDF()
 
+    # Add a page
+    pdf.add_page()
+
+    # set style and size of font
+    # that you want in the pdf
+    pdf.set_font("Arial", size=15)
+
+    for index, item in enumerate(items):
+        items_text = []
+
+        for key in item:
+            nn = 0
+            i = 0
+            match key:
+                case "Title":
+                    i = 0
+
+                case "URL":
+                    i = 1
+                case "UserName":
+                    i = 2
+                case "Password":
+                    i = 3
+                case "PIN":
+                    i = 4
+                case "Parola":
+                    i = 5
+                case "Notes":
+                    i = 6
+                case _:
+                    i = nn + 7
+                    nn += 1
+            items_text.insert(i, (key,item[key]))
+          
+        for text in items_text: 
+            text1 = f"{text[0].encode('latin-1', 'replace').decode('latin-1')}    :    {text[1].encode('latin-1', 'replace').decode('latin-1')}"
+            pdf.multi_cell(
+                w=210,
+                h=10,
+                txt= text1,
+                border=1,
+                align="L",
+                fill=False,
+            )
+        pdf.multi_cell(
+            w=210,
+            h=10,
+            txt= "\n------------------------------------------------------------------\n",
+            border=0,
+            align="L",
+            fill=False,
+        )
+
+
+    pdf.output("GFG.pdf")
 
 
 items = import_enote_items_struct()
-generate_master_view(items)
-set_detail_Viev()
-#write_enote_items(items, "dummy.enote", "aa", "bb")
+master_buttons = [len(items)]
+for index, item in enumerate(items):
+    master_buttons.append(generate_master_button(item, index))
+convert_to_pdf()
+# write_enote_items(items, "dummy.enote", "aa", "bb")
 
 root.mainloop()
