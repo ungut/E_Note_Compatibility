@@ -204,15 +204,16 @@ def generate_master_button(item, index):
 def convert_to_pdf():
     # save FPDF() class into a
     # variable pdf
-    pdf = FPDF()
+    pdf = FPDF(format="a4",unit="mm")
 
     # Add a page
     pdf.add_page()
 
     # set style and size of font
     # that you want in the pdf
-    pdf.set_font("Arial", size=15)
-
+    pdf.set_font("Times", size=15)
+    epw = pdf.w - 2*pdf.l_margin
+    text_height = 15
     for index, item in enumerate(items):
         items_text = []
 
@@ -239,25 +240,50 @@ def convert_to_pdf():
                     i = nn + 7
                     nn += 1
             items_text.insert(i, (key,item[key]))
-          
+
         for text in items_text: 
-            text1 = f"{text[0].encode('latin-1', 'replace').decode('latin-1')}    :    {text[1].encode('latin-1', 'replace').decode('latin-1')}"
+            text1 = f"{text[0].encode('latin-1', 'replace').decode('latin-1')}"
+            text2 = f"{text[1].encode('latin-1', 'replace').decode('latin-1')}"
+ 
+            if pdf.y + text_height > pdf.page_break_trigger:
+                pdf.add_page()
+            top = pdf.y
+ 
+            offset = pdf.x + 40
+            pdf.set_text_color(194,8,8)
+            pdf.set_font('',style='BU')
             pdf.multi_cell(
-                w=210,
-                h=10,
+                w=100,
+                h=text_height,
                 txt= text1,
-                border=1,
+                border=0,
                 align="L",
                 fill=False,
             )
-        pdf.multi_cell(
-            w=210,
-            h=10,
-            txt= "\n------------------------------------------------------------------\n",
-            border=0,
+            pdf.set_text_color(0,0,0)
+            pdf.set_font('')
+            pdf.set_font('',style="")
+
+            pdf.y = top
+
+            # Move to computed offset
+            pdf.x = offset 
+            pdf.multi_cell(
+            w=160, 
+            h=text_height,
+            txt= text2,
+            border=1,
             align="L",
             fill=False,
-        )
+            )
+        pdf.multi_cell(
+        w=210,
+        h=10,
+        txt= "\n\n",
+        border=0,
+        align="L",
+        fill=False,
+    )
 
 
     pdf.output("GFG.pdf")
