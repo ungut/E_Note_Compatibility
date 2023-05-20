@@ -16,7 +16,7 @@ from tkinter.ttk import Style
 from tkinter import Menu
 from fpdf import FPDF
 import unicodedata
-
+import atexit
 
 BG_COLOR = "#346466"
 WIN_WIDTH = 600
@@ -157,7 +157,12 @@ def set_detail_Viev(index):
     for key in items[index]:
         nn = 0
         i = 0
-
+        def text_edit(e):
+            k_key = str(e.widget).split('.')[-1][1:]
+            new_value = f"{e.widget.get('1.0','end')}"
+            if items[index][k_key] is not  new_value:
+                items[index][k_key] = new_value
+            print(items[index][k_key])
         match key:
             case "Title":
                 i = 0
@@ -178,12 +183,12 @@ def set_detail_Viev(index):
                 nn += 1
         text = items[index][key]
         height = text.splitlines()
-        w = tk.Text(second_detail_frame, borderwidth=3, font=("TkHeadingFont", 15),name=f"{i}")
+        w = tk.Text(second_detail_frame, borderwidth=3, font=("TkHeadingFont", 15),name=f"n{key}")
         w.config(height=max(3, len(height)))
         w.insert(1.0, text)
         w.grid(row=i, column=1, sticky="nwse", columnspan=10)
         tk.Label(second_detail_frame, text=key).grid(row=i, column=0, sticky="w")
-        w.bind('<Key>',lambda e:print(f" ii = {str(e.widget).split('.')[-1]}   {e.widget.get('1.0','end-1c')+e.char}"))
+        w.bind('<FocusOut>',lambda e:text_edit(e))
 
 
 def generate_master_button(item, index):
@@ -290,15 +295,24 @@ def convert_to_pdf():
 
     pdf.output("GFG.pdf")
 
+def my_exit_function():
+    print("hello")
+
 menubar = Menu(root)
 file = Menu(menubar, tearoff = 0)
 menubar.add_cascade(label ='File', menu = file)
 file.add_command(label ='New File', command = None)
 file.add_command(label ='Open...', command = None)
 file.add_command(label ='Save', command = None)
-# file.add_separator()
-# file.add_command(label ='Exit', command = root.destroy)
-  
+file.add_separator()
+def exiting_app():
+    if tk.messagebox.askyesno("Save Changes", "Save changes to the file?"):
+        print("save")
+        return
+    else:
+        root.destroy()
+file.add_command(label ='Exit', command = exiting_app)
+
 # Adding Edit Menu and commands
 edit = Menu(menubar, tearoff = 0)
 menubar.add_cascade(label ='Edit', menu = edit)
@@ -322,10 +336,6 @@ help_.add_command(label ='About Tk', command = None)
   
 # display Menu
 root.config(menu = menubar)
-
-tk.Variable()
-
-
 
 items = import_enote_items_struct()
 master_buttons = [len(items)]
