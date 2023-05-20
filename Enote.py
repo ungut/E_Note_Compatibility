@@ -13,6 +13,7 @@ import uuid
 import sys
 from tkmacosx import Button
 from tkinter.ttk import Style
+from tkinter import Menu
 from fpdf import FPDF
 import unicodedata
 
@@ -177,11 +178,12 @@ def set_detail_Viev(index):
                 nn += 1
         text = items[index][key]
         height = text.splitlines()
-        w = tk.Text(second_detail_frame, borderwidth=3, font=("TkHeadingFont", 15))
+        w = tk.Text(second_detail_frame, borderwidth=3, font=("TkHeadingFont", 15),name=f"{i}")
         w.config(height=max(3, len(height)))
         w.insert(1.0, text)
         w.grid(row=i, column=1, sticky="nwse", columnspan=10)
         tk.Label(second_detail_frame, text=key).grid(row=i, column=0, sticky="w")
+        w.bind('<Key>',lambda e:print(f" ii = {str(e.widget).split('.')[-1]}   {e.widget.get('1.0','end-1c')+e.char}"))
 
 
 def generate_master_button(item, index):
@@ -287,6 +289,42 @@ def convert_to_pdf():
 
 
     pdf.output("GFG.pdf")
+
+menubar = Menu(root)
+file = Menu(menubar, tearoff = 0)
+menubar.add_cascade(label ='File', menu = file)
+file.add_command(label ='New File', command = None)
+file.add_command(label ='Open...', command = None)
+file.add_command(label ='Save', command = None)
+# file.add_separator()
+# file.add_command(label ='Exit', command = root.destroy)
+  
+# Adding Edit Menu and commands
+edit = Menu(menubar, tearoff = 0)
+menubar.add_cascade(label ='Edit', menu = edit)
+edit.add_command(label ='Undo', command = None)
+edit.add_command(label ='Redo', command = None)
+edit.add_command(label ='Cut', command = None)
+edit.add_command(label ='Copy', command = None)
+edit.add_command(label ='Paste', command = None)
+edit.add_command(label ='Select All', command = None)
+edit.add_separator()
+edit.add_command(label ='Find...', command = None)
+# edit.add_command(label ='Find again', command = None)
+  
+# Adding Help Menu
+help_ = Menu(menubar, tearoff = 0)
+menubar.add_cascade(label ='Help', menu = help_)
+# help_.add_command(label ='Tk Help', command = None)
+# help_.add_command(label ='Demo', command = None)
+help_.add_separator()
+help_.add_command(label ='About Tk', command = None)
+  
+# display Menu
+root.config(menu = menubar)
+
+tk.Variable()
+
 
 
 items = import_enote_items_struct()
