@@ -22,6 +22,29 @@ BG_COLOR = "#346466"
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
 
+class items_data:
+    items = []
+    items0 = []
+    def set_initial_values(self,items_in):
+        self.items = items_in[::]
+        for ii in range(len(items_in) - 1 ):
+            sd = {}
+            for key in items_in[ii]:
+                value = items_in[ii][key]
+                sd[key] = value
+                
+            self.items0.append(sd)
+ 
+
+    def set_items(self,index,key,value):
+        self.items[index][key] = value
+
+
+    def set_items0(self,index,key,value):
+        self.items0[index][key] = value
+
+data_class = items_data()
+
 
 def import_enote_items_struct() -> {}:
     tk.Tk().withdraw()
@@ -154,6 +177,7 @@ logo_widget.image = logo_image
 def set_detail_Viev(index):
     for widgets in second_detail_frame.winfo_children():
         widgets.destroy()
+    items = data_class.items
     for key in items[index]:
         nn = 0
         i = 0
@@ -161,8 +185,9 @@ def set_detail_Viev(index):
             k_key = str(e.widget).split('.')[-1][1:]
             new_value = f"{e.widget.get('1.0','end')}"
             if items[index][k_key] is not  new_value:
-                items[index][k_key] = new_value
-            print(items[index][k_key])
+                data_class.set_items(index=index, key=k_key, value=new_value)
+ 
+
         match key:
             case "Title":
                 i = 0
@@ -181,7 +206,7 @@ def set_detail_Viev(index):
             case _:
                 i = nn + 7
                 nn += 1
-        text = items[index][key]
+        text = data_class.items[index][key]
         height = text.splitlines()
         w = tk.Text(second_detail_frame, borderwidth=3, font=("TkHeadingFont", 15),name=f"n{key}")
         w.config(height=max(3, len(height)))
@@ -298,19 +323,32 @@ def convert_to_pdf():
 def my_exit_function():
     print("hello")
 
+def open_file():
+    items = import_enote_items_struct()
+    data_class.set_initial_values(items)
+    update_master_view()
+
 menubar = Menu(root)
 file = Menu(menubar, tearoff = 0)
 menubar.add_cascade(label ='File', menu = file)
 file.add_command(label ='New File', command = None)
-file.add_command(label ='Open...', command = None)
+file.add_command(label ='Open...', command = lambda: open_file())
 file.add_command(label ='Save', command = None)
 file.add_separator()
+
+
 def exiting_app():
-    if tk.messagebox.askyesno("Save Changes", "Save changes to the file?"):
-        print("save")
-        return
-    else:
+    bay = [i for i in data_class.items if i not in data_class.items0]
+    if bay == []:
         root.destroy()
+    else:
+        if tk.messagebox.askyesno("Save Changes", "Save changes to the file?"):
+            print("save")
+            return
+        else:
+            root.destroy()
+    
+  
 file.add_command(label ='Exit', command = exiting_app)
 
 # Adding Edit Menu and commands
@@ -337,11 +375,14 @@ help_.add_command(label ='About Tk', command = None)
 # display Menu
 root.config(menu = menubar)
 
-items = import_enote_items_struct()
-master_buttons = [len(items)]
-for index, item in enumerate(items):
-    master_buttons.append(generate_master_button(item, index))
-convert_to_pdf()
+def update_master_view():
+    master_buttons = [len(data_class.items)]
+    for index, item in enumerate(data_class.items):
+        master_buttons.append(generate_master_button(item, index))
+
+if data_class.items == []:
+    open_file()
+#convert_to_pdf()
 # write_enote_items(items, "dummy.enote", "aa", "bb")
 
 root.mainloop()
