@@ -14,6 +14,10 @@ import sys
 from tkmacosx import Button
 from tkinter.ttk import Style
 from tkinter import Menu
+from tkinter import Label
+from tkinter import StringVar
+from tkinter import Entry
+
 from fpdf import FPDF
 import unicodedata
 import atexit
@@ -21,6 +25,26 @@ import atexit
 BG_COLOR = "#346466"
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
+class MyDialog(tk.simpledialog.Dialog):
+
+    def body(self, master):
+
+        Label(master, text="Username:").grid(row=0)
+        Label(master, text="Password:").grid(row=1)
+
+        self.e1 = Entry(master,show="*")
+        self.e2 = Entry(master,show="*")
+
+        self.e1.grid(row=0, column=1)
+        self.e2.grid(row=1, column=1)
+        return self.e1 # initial focus
+
+    def apply(self):
+        global username_and_password
+        first = self.e1.get()
+        second = self.e2.get()
+        username_and_password = f"{first}{second}"
+
 
 class items_data:
     items = []
@@ -45,18 +69,30 @@ class items_data:
         self.items0[index][key] = value
 
     def is_changed(self):
-        bay = len([i for i in self.items if i not in self.items0]) is not 0
+        bay = len([i for i in self.items if i not in self.items0]) != 0
         return bay 
 
         
 
 data_class = items_data()
 
+def login_verification():
+    pass
+ 
 
 def import_enote_items_struct() -> {}:
     tk.Tk().withdraw()
+    global filename
     filename = askopenfilename()
-    encrypted_data = read_enote_file(filename, username="aa", password="bb")
+    hint = read_hint(filename)
+    if hint != "-1":
+        tk.Tk().withdraw()
+        d = MyDialog(root)
+        #print (username_and_password)
+        #username = tk.simpledialog.askstring("Username", "Enter username:", show='*')
+        #password = tk.simpledialog.askstring("Password", "Enter password:", show='*')
+
+    encrypted_data = read_enote_file(filename,passdata= username_and_password)
     return get_enote_items(encrypted_data)
 
 
@@ -85,8 +121,19 @@ def get_enote_items(data) -> [{str: str}]:
 
     return enote_items
 
+def read_hint(filename)->str:
+        try:
+            plist = readPlist(filename)
+            if len(plist) > 1:
+                hint_data = plist[1]
+                return str(hint_data,encoding="utf-8")
+            else:
+                return ""
+        except (InvalidPlistException, NotBinaryPlistException):
+            return "-1"
 
-def read_enote_file(filename, username, password):
+
+def read_enote_file(filename, passdata):
     try:
         plist = readPlist(filename)
     except (InvalidPlistException, NotBinaryPlistException):
@@ -94,7 +141,7 @@ def read_enote_file(filename, username, password):
     nonce = plist[0][0:12]
     tag = plist[0][-16:]
     ciphertext = plist[0][12:-16]
-    pass_word = SHA256.new(b64encode((username + password).encode("utf-8"))).digest()
+    pass_word = SHA256.new(b64encode((passdata).encode("utf-8"))).digest()
     cipher = AES.new(pass_word, AES.MODE_GCM, nonce)
     decrypted_cyphertext = cipher.decrypt_and_verify(ciphertext, tag)
     decrypted_data = json.loads(decrypted_cyphertext)
@@ -102,11 +149,11 @@ def read_enote_file(filename, username, password):
     return decrypted_data
 
 
-def write_enote_items(items, filename, username, password) -> bytes:
+def write_enote_items(items, filename, passdata) -> bytes:
     gg = pack_enote_items(items)
     data = bytes(json.dumps(gg), "utf-8")
     nonce = os.urandom(12)
-    pass_word = SHA256.new(b64encode((username + password).encode("utf-8"))).digest()
+    pass_word = SHA256.new(b64encode((passdata).encode("utf-8"))).digest()
     cipher = AES.new(pass_word, AES.MODE_GCM, nonce)
     ciphertext, tag = cipher.encrypt_and_digest(data)
     # print(' '.join('{:02d}'.format(x) for x in nonce))
@@ -119,6 +166,11 @@ def write_enote_items(items, filename, username, password) -> bytes:
         print("Not a plist:")
 
     return encrypted_data
+
+
+ 
+
+
 
 
 root = tk.Tk()
@@ -193,6 +245,7 @@ def set_detail_Viev(index):
             new_value = f"{e.widget.get('1.0','end')}"
             if items[index][k_key] is not  new_value:
                 data_class.set_items(index=index, key=k_key, value=new_value)
+                write_enote_items(data_class.items, filename, passdata=username_and_password)
  
 
         match key:
@@ -350,7 +403,7 @@ def exiting_app():
     else:
         if tk.messagebox.askyesno("Save Changes", "Save changes to the file?"):
             items = data_class.items
-            write_enote_items(items, "dummy.enote", "aa", "bb")
+            write_enote_items(items, filename,passdata=username_and_password)
             data_class.set_initial_values(items)
             return
         else:
@@ -384,6 +437,9 @@ help_.add_command(label ='About Tk', command = None)
 root.config(menu = menubar)
 
 def update_master_view():
+    for widgets in second_frame.winfo_children():
+        widgets.destroy()
+
     master_buttons = [len(data_class.items)]
     for index, item in enumerate(data_class.items):
         master_buttons.append(generate_master_button(item, index))
