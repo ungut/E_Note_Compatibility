@@ -26,8 +26,9 @@ class items_data:
     items = []
     items0 = []
     def set_initial_values(self,items_in):
+        self.items0 = []
         self.items = items_in[::]
-        for ii in range(len(items_in) - 1 ):
+        for ii in range(len(items_in)):
             sd = {}
             for key in items_in[ii]:
                 value = items_in[ii][key]
@@ -42,6 +43,12 @@ class items_data:
 
     def set_items0(self,index,key,value):
         self.items0[index][key] = value
+
+    def is_changed(self):
+        bay = len([i for i in self.items if i not in self.items0]) is not 0
+        return bay 
+
+        
 
 data_class = items_data()
 
@@ -338,12 +345,13 @@ file.add_separator()
 
 
 def exiting_app():
-    bay = [i for i in data_class.items if i not in data_class.items0]
-    if bay == []:
+    if  data_class.is_changed() == False:
         root.destroy()
     else:
         if tk.messagebox.askyesno("Save Changes", "Save changes to the file?"):
-            print("save")
+            items = data_class.items
+            write_enote_items(items, "dummy.enote", "aa", "bb")
+            data_class.set_initial_values(items)
             return
         else:
             root.destroy()
