@@ -25,19 +25,21 @@ import atexit
 BG_COLOR = "#346466"
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
+
+is_editing = False
+undo_stack = []
+redo_stack = []
 class MyDialog(tk.simpledialog.Dialog):
-
     def body(self, master):
-
         Label(master, text="Username:").grid(row=0)
         Label(master, text="Password:").grid(row=1)
 
-        self.e1 = Entry(master,show="*")
-        self.e2 = Entry(master,show="*")
+        self.e1 = Entry(master, show="*")
+        self.e2 = Entry(master, show="*")
 
         self.e1.grid(row=0, column=1)
         self.e2.grid(row=1, column=1)
-        return self.e1 # initial focus
+        return self.e1  # initial focus
 
     def apply(self):
         global username_and_password
@@ -49,7 +51,9 @@ class MyDialog(tk.simpledialog.Dialog):
 class items_data:
     items = []
     items0 = []
-    def set_initial_values(self,items_in):
+    sort_type = "name"
+
+    def set_initial_values(self, items_in):
         self.items0 = []
         self.items = items_in[::]
         for ii in range(len(items_in)):
@@ -57,28 +61,40 @@ class items_data:
             for key in items_in[ii]:
                 value = items_in[ii][key]
                 sd[key] = value
-                
-            self.items0.append(sd)
- 
 
-    def set_items(self,index,key,value):
+            self.items0.append(sd)
+
+    def set_items(self, index, key, value):
         self.items[index][key] = value
 
-
-    def set_items0(self,index,key,value):
+    def set_items0(self, index, key, value):
         self.items0[index][key] = value
 
     def is_changed(self):
         bay = len([i for i in self.items if i not in self.items0]) != 0
-        return bay 
+        return bay
+    def delete_item(self,index):
+        undo_stack.append(self.items[index])
+        global can_undo
+        can_undo = len(undo_stack) > 0
+        self.items.pop(index)
+    def add_item(self,item):
+        self.items.append(item)
+    def sort_function(self,e):
+        if sort_type is "name":
+            return e["Title"][0:3]
 
-        
+    def sort(self,stype):
+        global sort_type
+        sort_type = stype
+        self.items.sort(key=self.sort_function)
 
 data_class = items_data()
 
+
 def login_verification():
     pass
- 
+
 
 def import_enote_items_struct() -> {}:
     tk.Tk().withdraw()
@@ -87,12 +103,10 @@ def import_enote_items_struct() -> {}:
     hint = read_hint(filename)
     if hint != "-1":
         tk.Tk().withdraw()
-        d = MyDialog(root)
-        #print (username_and_password)
-        #username = tk.simpledialog.askstring("Username", "Enter username:", show='*')
-        #password = tk.simpledialog.askstring("Password", "Enter password:", show='*')
+        MyDialog(root)
+        # password = tk.simpledialog.askstring("Password", "Enter password:", show='*')
 
-    encrypted_data = read_enote_file(filename,passdata= username_and_password)
+    encrypted_data = read_enote_file(filename, passdata=username_and_password)
     return get_enote_items(encrypted_data)
 
 
@@ -121,16 +135,17 @@ def get_enote_items(data) -> [{str: str}]:
 
     return enote_items
 
-def read_hint(filename)->str:
-        try:
-            plist = readPlist(filename)
-            if len(plist) > 1:
-                hint_data = plist[1]
-                return str(hint_data,encoding="utf-8")
-            else:
-                return ""
-        except (InvalidPlistException, NotBinaryPlistException):
-            return "-1"
+
+def read_hint(filename) -> str:
+    try:
+        plist = readPlist(filename)
+        if len(plist) > 1:
+            hint_data = plist[1]
+            return str(hint_data, encoding="utf-8")
+        else:
+            return ""
+    except (InvalidPlistException, NotBinaryPlistException):
+        return "-1"
 
 
 def read_enote_file(filename, passdata):
@@ -168,18 +183,13 @@ def write_enote_items(items, filename, passdata) -> bytes:
     return encrypted_data
 
 
- 
-
-
-
-
 root = tk.Tk()
 root.title("Enote")
 root.eval("tk::PlaceWindow . center")
 
 # çreate a Canvas
 master_frame = tk.Frame(root, width=WIN_WIDTH / 3, height=WIN_HEIGHT, bg=BG_COLOR)
-master_frame.pack(side="left", fill="y", expand=0)
+master_frame.pack(side="left", fill="both", expand=1)
 master_frame.pack_propagate(False)
 
 detail_frame = tk.Frame(
@@ -240,13 +250,15 @@ def set_detail_Viev(index):
     for key in items[index]:
         nn = 0
         i = 0
+
         def text_edit(e):
-            k_key = str(e.widget).split('.')[-1][1:]
+            k_key = str(e.widget).split(".")[-1][1:]
             new_value = f"{e.widget.get('1.0','end')}"
-            if items[index][k_key] is not  new_value:
+            if items[index][k_key] is not new_value:
                 data_class.set_items(index=index, key=k_key, value=new_value)
-                write_enote_items(data_class.items, filename, passdata=username_and_password)
- 
+                write_enote_items(
+                    data_class.items, filename, passdata=username_and_password
+                )
 
         match key:
             case "Title":
@@ -268,13 +280,21 @@ def set_detail_Viev(index):
                 nn += 1
         text = data_class.items[index][key]
         height = text.splitlines()
-        w = tk.Text(second_detail_frame, borderwidth=3, font=("TkHeadingFont", 15),name=f"n{key}")
+        w = tk.Text(
+            second_detail_frame,
+            borderwidth=3,
+            font=("TkHeadingFont", 15),
+            name=f"n{key}",
+        )
         w.config(height=max(3, len(height)))
         w.insert(1.0, text)
         w.grid(row=i, column=1, sticky="nwse", columnspan=10)
         tk.Label(second_detail_frame, text=key).grid(row=i, column=0, sticky="w")
-        w.bind('<FocusOut>',lambda e:text_edit(e))
+        w.bind("<FocusOut>", lambda e: text_edit(e))
 
+def delete_item(index):
+    data_class.delete_item(index)
+    update_master_view()
 
 def generate_master_button(item, index):
     text = item["Title"]
@@ -290,13 +310,86 @@ def generate_master_button(item, index):
         activebackground="#badee2",
         activeforeground="black",
         command=lambda: set_detail_Viev(index),
-    ).grid(row=index + 2, column=0, sticky="w", pady=5)
+    ).grid(row=index + 2, column=int(is_editing), sticky="w", pady=5)
+    if is_editing:
+        Button(
+        second_frame,
+        text="DEL",
+        width=30,
+        anchor="w",
+        font=("TkHeadingFont", 15),
+        bg="red",
+        fg="white",
+        cursor="hand2",
+        #activebackground="#badee2",
+        #activeforeground="black",
+        command=lambda:delete_item(index),
+    ).grid(row=index + 2, column=0,padx=5, sticky="w", pady=5)
+
+
+
+def toogle_is_editing():
+    global is_editing
+    is_editing = not is_editing
+    update_master_view()
+
+def undo():
+    item = undo_stack.pop()
+    data_class.add_item(item)
+    can_undo = len(undo_stack) > 0
+    update_master_view()
+
+def generate_master_toolbar():
+    global undo_stack
+    global redo_stack
+    Button(
+        second_frame,
+        text="Edit",
+        width=50,
+        anchor="w",
+        font=("TkHeadingFont", 15),
+        bg=BG_COLOR,
+        fg="white",
+        cursor="hand2",
+        activebackground="#badee2",
+        activeforeground="black",
+        command=lambda: toogle_is_editing(),
+    ).grid(row=0, column=0, sticky="w", pady=5,padx=5)
+    if len(undo_stack) > 0:
+        Button(
+        second_frame,
+        text="Undo",
+        width=50,
+        anchor="w",
+        font=("TkHeadingFont", 15),
+        bg=BG_COLOR,
+        fg="white",
+        cursor="hand2",
+        activebackground="#badee2",
+        activeforeground="black",
+        command=lambda:undo(),
+    ).grid(row=0, column=1,padx=5, sticky="w", pady=5,columnspan=3)
+    if len(redo_stack) > 0:
+        Button(
+        second_frame,
+        text="Redo",
+        width=30,
+        anchor="w",
+        font=("TkHeadingFont", 15),
+        bg=BG_COLOR,
+        fg="white",
+        cursor="hand2",
+        activebackground="#badee2",
+        activeforeground="black",
+        command=lambda:redo(),
+    ).grid(row=0, column=2,padx=5, sticky="w", pady=5)
+
 
 
 def convert_to_pdf():
     # save FPDF() class into a
     # variable pdf
-    pdf = FPDF(format="a4",unit="mm")
+    pdf = FPDF(format="a4", unit="mm")
 
     # Add a page
     pdf.add_page()
@@ -304,7 +397,7 @@ def convert_to_pdf():
     # set style and size of font
     # that you want in the pdf
     pdf.set_font("Times", size=15)
-    epw = pdf.w - 2*pdf.l_margin
+    epw = pdf.w - 2 * pdf.l_margin
     text_height = 15
     for index, item in enumerate(items):
         items_text = []
@@ -331,122 +424,127 @@ def convert_to_pdf():
                 case _:
                     i = nn + 7
                     nn += 1
-            items_text.insert(i, (key,item[key]))
+            items_text.insert(i, (key, item[key]))
 
-        for text in items_text: 
+        for text in items_text:
             text1 = f"{text[0].encode('latin-1', 'replace').decode('latin-1')}"
             text2 = f"{text[1].encode('latin-1', 'replace').decode('latin-1')}"
- 
+
             if pdf.y + text_height > pdf.page_break_trigger:
                 pdf.add_page()
             top = pdf.y
- 
+
             offset = pdf.x + 40
-            pdf.set_text_color(194,8,8)
-            pdf.set_font('',style='BU')
+            pdf.set_text_color(194, 8, 8)
+            pdf.set_font("", style="BU")
             pdf.multi_cell(
                 w=100,
                 h=text_height,
-                txt= text1,
+                txt=text1,
                 border=0,
                 align="L",
                 fill=False,
             )
-            pdf.set_text_color(0,0,0)
-            pdf.set_font('')
-            pdf.set_font('',style="")
+            pdf.set_text_color(0, 0, 0)
+            pdf.set_font("")
+            pdf.set_font("", style="")
 
             pdf.y = top
 
             # Move to computed offset
-            pdf.x = offset 
+            pdf.x = offset
             pdf.multi_cell(
-            w=160, 
-            h=text_height,
-            txt= text2,
-            border=1,
-            align="L",
-            fill=False,
+                w=160,
+                h=text_height,
+                txt=text2,
+                border=1,
+                align="L",
+                fill=False,
             )
         pdf.multi_cell(
-        w=210,
-        h=10,
-        txt= "\n\n",
-        border=0,
-        align="L",
-        fill=False,
-    )
-
+            w=210,
+            h=10,
+            txt="\n\n",
+            border=0,
+            align="L",
+            fill=False,
+        )
 
     pdf.output("GFG.pdf")
 
+
 def my_exit_function():
     print("hello")
+
 
 def open_file():
     items = import_enote_items_struct()
     data_class.set_initial_values(items)
     update_master_view()
 
+
 menubar = Menu(root)
-file = Menu(menubar, tearoff = 0)
-menubar.add_cascade(label ='File', menu = file)
-file.add_command(label ='New File', command = None)
-file.add_command(label ='Open...', command = lambda: open_file())
-file.add_command(label ='Save', command = None)
+file = Menu(menubar, tearoff=0)
+menubar.add_cascade(label="File", menu=file)
+file.add_command(label="New File", command=None)
+file.add_command(label="Open...", command=lambda: open_file())
+file.add_command(label="Save", command=None)
 file.add_separator()
 
 
 def exiting_app():
-    if  data_class.is_changed() == False:
+    if data_class.is_changed() == False:
         root.destroy()
     else:
         if tk.messagebox.askyesno("Save Changes", "Save changes to the file?"):
             items = data_class.items
-            write_enote_items(items, filename,passdata=username_and_password)
+            write_enote_items(items, filename, passdata=username_and_password)
             data_class.set_initial_values(items)
             return
         else:
             root.destroy()
-    
-  
-file.add_command(label ='Exit', command = exiting_app)
+
+
+file.add_command(label="Exit", command=exiting_app)
 
 # Adding Edit Menu and commands
-edit = Menu(menubar, tearoff = 0)
-menubar.add_cascade(label ='Edit', menu = edit)
-edit.add_command(label ='Undo', command = None)
-edit.add_command(label ='Redo', command = None)
-edit.add_command(label ='Cut', command = None)
-edit.add_command(label ='Copy', command = None)
-edit.add_command(label ='Paste', command = None)
-edit.add_command(label ='Select All', command = None)
+edit = Menu(menubar, tearoff=0)
+menubar.add_cascade(label="Edit", menu=edit)
+edit.add_command(label="Undo", command=None)
+edit.add_command(label="Redo", command=None)
+edit.add_command(label="Cut", command=None)
+edit.add_command(label="Copy", command=None)
+edit.add_command(label="Paste", command=None)
+edit.add_command(label="Select All", command=None)
 edit.add_separator()
-edit.add_command(label ='Find...', command = None)
+edit.add_command(label="Find...", command=None)
 # edit.add_command(label ='Find again', command = None)
-  
+
 # Adding Help Menu
-help_ = Menu(menubar, tearoff = 0)
-menubar.add_cascade(label ='Help', menu = help_)
+help_ = Menu(menubar, tearoff=0)
+menubar.add_cascade(label="Help", menu=help_)
 # help_.add_command(label ='Tk Help', command = None)
 # help_.add_command(label ='Demo', command = None)
 help_.add_separator()
-help_.add_command(label ='About Tk', command = None)
-  
+help_.add_command(label="About Tk", command=None)
+
 # display Menu
-root.config(menu = menubar)
+root.config(menu=menubar)
+
 
 def update_master_view():
     for widgets in second_frame.winfo_children():
         widgets.destroy()
-
+    generate_master_toolbar()
+    data_class.sort("name")
     master_buttons = [len(data_class.items)]
     for index, item in enumerate(data_class.items):
         master_buttons.append(generate_master_button(item, index))
 
+
 if data_class.items == []:
     open_file()
-#convert_to_pdf()
+# convert_to_pdf()
 # write_enote_items(items, "dummy.enote", "aa", "bb")
 
 root.mainloop()
