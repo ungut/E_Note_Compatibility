@@ -26,15 +26,15 @@ BG_COLOR = "#346466"
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
 is_editing = False
-undo_stack = []
-redo_stack = []
+
+
 def darkstyle(root):
-    ''' Return a dark style to the window'''
+    """Return a dark style to the window"""
     style = Style(root)
-    root.tk.call('source', 'Azure/azure dark.tcl')
-    style.theme_use('azure')
-    style.configure("Accentbutton", foreground='white')
-    style.configure("Togglebutton", foreground='white')
+    root.tk.call("source", "Azure/azure dark.tcl")
+    style.theme_use("azure")
+    style.configure("Accentbutton", foreground="white")
+    style.configure("Togglebutton", foreground="white")
     return style
 
 
@@ -61,10 +61,43 @@ class items_data:
     items = []
     items0 = []
     sort_type = "name"
+    undo_stack = []
+    redo_stack = []
 
     def set_initial_values(self, items_in):
         self.items0 = []
         self.items = items_in[::]
+        self.set_items0(items_in)
+
+    def register_undo(self):
+        self.undo_stack.append(data_class.items0)
+        if len(self.undo_stack) > 5:
+            undo_stack.pop(0)
+            self.item0 = []
+        self.set_items0(self.items)
+        rr = self.items0
+        pass
+
+    def register_redo(self):
+        self.redo_stack.append(data_class.items0)
+        if len(self.redo_stack) > 5:
+            self.redo_stack.pop(0)
+        self.set_items0(self.items)
+
+    def undo(self):
+        tt = self.undo_stack.pop()
+        self.items = tt
+        self.register_redo()
+
+    def redo(self):
+        self.items = self.redo_stack.pop()
+        self.register_undo()
+
+    def set_items(self, index, key, value):
+        self.items[index][key] = value
+
+    def set_items0(self, items_in):
+        self.items0 = []
         for ii in range(len(items_in)):
             sd = {}
             for key in items_in[ii]:
@@ -73,29 +106,28 @@ class items_data:
 
             self.items0.append(sd)
 
-    def set_items(self, index, key, value):
-        self.items[index][key] = value
-
-    def set_items0(self, index, key, value):
-        self.items0[index][key] = value
-
     def is_changed(self):
         bay = len([i for i in self.items if i not in self.items0]) != 0
         return bay
-    def delete_item(self,index):
+
+    def delete_item(self, index):
         self.items.pop(index)
-    def add_item(self,item):
+
+    def add_item(self, item):
         self.items.append(item)
-    def sort_function(self,e):
+
+    def sort_function(self, e):
         if sort_type == "name":
             return e["Title"][0:3]
 
-    def sort(self,stype):
+    def sort(self, stype):
         global sort_type
         sort_type = stype
         self.items.sort(key=self.sort_function)
 
+
 data_class = items_data()
+
 
 def import_enote_items_struct() -> {}:
     tk.Tk().withdraw()
@@ -190,7 +222,7 @@ root.eval("tk::PlaceWindow . center")
 tk.style = darkstyle(root)
 
 master_toolbar = tk.Frame(root, width=WIN_WIDTH / 3, height=30, bg=BG_COLOR)
-master_toolbar.pack(side="top", fill="both", expand="yes",pady=5)
+master_toolbar.pack(side="top", fill="both", expand="yes", pady=5)
 master_toolbar.pack_propagate(False)
 # çreate a Canvas
 master_frame = tk.Frame(root, width=WIN_WIDTH / 3, height=WIN_HEIGHT, bg=BG_COLOR)
@@ -293,20 +325,23 @@ def set_detail_Viev(index):
         )
         w.config(height=max(3, len(height)))
         w.insert(1.0, text)
-        w.configure(bg="#28393a",fg="white")
+        w.configure(bg="#28393a", fg="white")
         w.grid(row=i, column=1, sticky="nwse", columnspan=10)
         tk.Label(
-            second_detail_frame, 
-            text=key,bg="#28393a",
+            second_detail_frame,
+            text=key,
+            bg="#28393a",
             font=("TkHeadingFont", 18),
-            fg="white"
-        ).grid(row=i, column=0, sticky="w",pady=5)
+            fg="white",
+        ).grid(row=i, column=0, sticky="w", pady=5)
         w.bind("<FocusOut>", lambda e: text_edit(e))
 
+
 def delete_item(index):
-    undo_stack.append(data_class.items0)
     data_class.delete_item(index)
+    data_class.register_undo()
     update_master_view()
+
 
 def generate_master_button(item, index):
     text = item["Title"]
@@ -325,19 +360,18 @@ def generate_master_button(item, index):
     ).grid(row=index + 2, column=int(is_editing), sticky="w", pady=5)
     if is_editing:
         Button(
-        second_frame,
-        text="DEL",
-        width=30,
-        anchor="w",
-        font=("TkHeadingFont", 15),
-        bg="red",
-        fg="white",
-        cursor="hand2",
-        #activebackground="#badee2",
-        #activeforeground="black",
-        command=lambda:delete_item(index),
-    ).grid(row=index + 2, column=0,padx=5, sticky="w", pady=5)
-
+            second_frame,
+            text="DEL",
+            width=30,
+            anchor="w",
+            font=("TkHeadingFont", 15),
+            bg="red",
+            fg="white",
+            cursor="hand2",
+            # activebackground="#badee2",
+            # activeforeground="black",
+            command=lambda: delete_item(index),
+        ).grid(row=index + 2, column=0, padx=5, sticky="w", pady=5)
 
 
 def toogle_is_editing():
@@ -345,14 +379,17 @@ def toogle_is_editing():
     is_editing = not is_editing
     update_master_view()
 
+
 def undo():
-    items = undo_stack.pop()
-    data_class.set_initial_values(items)
+    data_class.undo()
+    update_master_view()
+def redo():
+    data_class.redo()
     update_master_view()
 
+
 def generate_master_toolbar():
-    global undo_stack
-    global redo_stack
+    global data_class
     Button(
         master_toolbar,
         text="Edit",
@@ -365,36 +402,35 @@ def generate_master_toolbar():
         activebackground="#badee2",
         activeforeground="black",
         command=lambda: toogle_is_editing(),
-    ).grid(row=0, column=0, sticky="w", pady=5,padx=5)
-    if len(undo_stack) > 0:
+    ).grid(row=0, column=0, sticky="w", pady=5, padx=5)
+    if len(data_class.undo_stack) > 0:
         Button(
-        master_toolbar,
-        text="Undo",
-        width=50,
-        anchor="w",
-        font=("TkHeadingFont", 15),
-        bg=BG_COLOR,
-        fg="white",
-        cursor="hand2",
-        activebackground="#badee2",
-        activeforeground="black",
-        command=lambda:undo(),
-    ).grid(row=0, column=1,padx=5, sticky="w", pady=5,columnspan=3)
-    if len(redo_stack) > 0:
+            master_toolbar,
+            text="Undo",
+            width=50,
+            anchor="w",
+            font=("TkHeadingFont", 15),
+            bg=BG_COLOR,
+            fg="white",
+            cursor="hand2",
+            activebackground="#badee2",
+            activeforeground="black",
+            command=lambda: undo(),
+        ).grid(row=0, column=1, padx=5, sticky="w", pady=5, columnspan=3)
+    if len(data_class.redo_stack) > 0:
         Button(
-        master_toolbar,
-        text="Redo",
-        width=30,
-        anchor="w",
-        font=("TkHeadingFont", 15),
-        bg=BG_COLOR,
-        fg="white",
-        cursor="hand2",
-        activebackground="#badee2",
-        activeforeground="black",
-        command=lambda:redo(),
-    ).grid(row=0, column=2,padx=5, sticky="w", pady=5)
-
+            master_toolbar,
+            text="Redo",
+            width=50,
+            anchor="w",
+            font=("TkHeadingFont", 15),
+            bg=BG_COLOR,
+            fg="white",
+            cursor="hand2",
+            activebackground="#badee2",
+            activeforeground="black",
+            command=lambda: redo(),
+        ).grid(row=0, column=2, padx=5, sticky="w", pady=5)
 
 
 def convert_to_pdf():
