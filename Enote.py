@@ -29,6 +29,7 @@ WIN_HEIGHT = 800
 is_editing = False
 undo_stack = []
 redo_stack = []
+current_item = {}
 class MyDialog(tk.simpledialog.Dialog):
     def body(self, master):
         Label(master, text="Username:").grid(row=0)
@@ -186,7 +187,9 @@ def write_enote_items(items, filename, passdata) -> bytes:
 root = tk.Tk()
 root.title("Enote")
 root.eval("tk::PlaceWindow . center")
-
+master_toolbar = tk.Frame(root, width=WIN_WIDTH / 3, height=30, bg=BG_COLOR)
+master_toolbar.pack(side="top", fill="both", expand="yes",pady=5)
+master_toolbar.pack_propagate(False)
 # çreate a Canvas
 master_frame = tk.Frame(root, width=WIN_WIDTH / 3, height=WIN_HEIGHT, bg=BG_COLOR)
 master_frame.pack(side="left", fill="both", expand=1)
@@ -336,14 +339,13 @@ def toogle_is_editing():
 def undo():
     item = undo_stack.pop()
     data_class.add_item(item)
-    can_undo = len(undo_stack) > 0
     update_master_view()
 
 def generate_master_toolbar():
     global undo_stack
     global redo_stack
     Button(
-        second_frame,
+        master_toolbar,
         text="Edit",
         width=50,
         anchor="w",
@@ -357,7 +359,7 @@ def generate_master_toolbar():
     ).grid(row=0, column=0, sticky="w", pady=5,padx=5)
     if len(undo_stack) > 0:
         Button(
-        second_frame,
+        master_toolbar,
         text="Undo",
         width=50,
         anchor="w",
@@ -371,7 +373,7 @@ def generate_master_toolbar():
     ).grid(row=0, column=1,padx=5, sticky="w", pady=5,columnspan=3)
     if len(redo_stack) > 0:
         Button(
-        second_frame,
+        master_toolbar,
         text="Redo",
         width=30,
         anchor="w",
