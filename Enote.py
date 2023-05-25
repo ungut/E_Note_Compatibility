@@ -25,11 +25,19 @@ import atexit
 BG_COLOR = "#346466"
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
-
 is_editing = False
 undo_stack = []
 redo_stack = []
-current_item = {}
+def darkstyle(root):
+    ''' Return a dark style to the window'''
+    style = Style(root)
+    root.tk.call('source', 'Azure/azure dark.tcl')
+    style.theme_use('azure')
+    style.configure("Accentbutton", foreground='white')
+    style.configure("Togglebutton", foreground='white')
+    return style
+
+
 class MyDialog(tk.simpledialog.Dialog):
     def body(self, master):
         Label(master, text="Username:").grid(row=0)
@@ -75,14 +83,11 @@ class items_data:
         bay = len([i for i in self.items if i not in self.items0]) != 0
         return bay
     def delete_item(self,index):
-        undo_stack.append(self.items[index])
-        global can_undo
-        can_undo = len(undo_stack) > 0
         self.items.pop(index)
     def add_item(self,item):
         self.items.append(item)
     def sort_function(self,e):
-        if sort_type is "name":
+        if sort_type == "name":
             return e["Title"][0:3]
 
     def sort(self,stype):
@@ -91,11 +96,6 @@ class items_data:
         self.items.sort(key=self.sort_function)
 
 data_class = items_data()
-
-
-def login_verification():
-    pass
-
 
 def import_enote_items_struct() -> {}:
     tk.Tk().withdraw()
@@ -187,6 +187,8 @@ def write_enote_items(items, filename, passdata) -> bytes:
 root = tk.Tk()
 root.title("Enote")
 root.eval("tk::PlaceWindow . center")
+tk.style = darkstyle(root)
+
 master_toolbar = tk.Frame(root, width=WIN_WIDTH / 3, height=30, bg=BG_COLOR)
 master_toolbar.pack(side="top", fill="both", expand="yes",pady=5)
 master_toolbar.pack_propagate(False)
@@ -291,11 +293,18 @@ def set_detail_Viev(index):
         )
         w.config(height=max(3, len(height)))
         w.insert(1.0, text)
+        w.configure(bg="#28393a",fg="white")
         w.grid(row=i, column=1, sticky="nwse", columnspan=10)
-        tk.Label(second_detail_frame, text=key).grid(row=i, column=0, sticky="w")
+        tk.Label(
+            second_detail_frame, 
+            text=key,bg="#28393a",
+            font=("TkHeadingFont", 18),
+            fg="white"
+        ).grid(row=i, column=0, sticky="w",pady=5)
         w.bind("<FocusOut>", lambda e: text_edit(e))
 
 def delete_item(index):
+    undo_stack.append(data_class.items0)
     data_class.delete_item(index)
     update_master_view()
 
@@ -337,8 +346,8 @@ def toogle_is_editing():
     update_master_view()
 
 def undo():
-    item = undo_stack.pop()
-    data_class.add_item(item)
+    items = undo_stack.pop()
+    data_class.set_initial_values(items)
     update_master_view()
 
 def generate_master_toolbar():
@@ -536,6 +545,8 @@ root.config(menu=menubar)
 
 def update_master_view():
     for widgets in second_frame.winfo_children():
+        widgets.destroy()
+    for widgets in master_toolbar.winfo_children():
         widgets.destroy()
     generate_master_toolbar()
     data_class.sort("name")
