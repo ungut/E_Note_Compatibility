@@ -279,10 +279,13 @@ logo_widget = tk.Label(master_frame, image=logo_image, bg="#346466")
 logo_widget.image = logo_image
 # logo_widget.pack(anchor="w")
 
+def clear_second_detail_frame():
+        for widgets in second_detail_frame.winfo_children():
+            widgets.destroy()
+
 
 def set_detail_Viev(index):
-    for widgets in second_detail_frame.winfo_children():
-        widgets.destroy()
+    clear_second_detail_frame()
     items = data_class.items
     for key in items[index]:
         nn = 0
@@ -291,8 +294,10 @@ def set_detail_Viev(index):
         def text_edit(e):
             k_key = str(e.widget).split(".")[-1][1:]
             new_value = f"{e.widget.get('1.0','end')}"
-            if items[index][k_key] is not new_value:
+            if items[index][k_key].splitlines() != new_value.splitlines():
                 data_class.set_items(index=index, key=k_key, value=new_value)
+                data_class.register_undo()
+                update_toobar()
                 write_enote_items(
                     data_class.items, filename, passdata=username_and_password
                 )
@@ -317,6 +322,7 @@ def set_detail_Viev(index):
                 nn += 1
         text = data_class.items[index][key]
         height = text.splitlines()
+
         w = tk.Text(
             second_detail_frame,
             borderwidth=3,
@@ -327,13 +333,21 @@ def set_detail_Viev(index):
         w.insert(1.0, text)
         w.configure(bg="#28393a", fg="white")
         w.grid(row=i, column=1, sticky="nwse", columnspan=10)
-        tk.Label(
-            second_detail_frame,
-            text=key,
-            bg="#28393a",
+
+        Button(
+           second_detail_frame,
+            text=f"{key}",
+            width=60,
+            height = 40,
+            anchor="w",
             font=("TkHeadingFont", 18),
+            bg=BG_COLOR,
             fg="white",
-        ).grid(row=i, column=0, sticky="w", pady=5)
+            cursor="hand2",
+            activebackground="#badee2",
+            activeforeground="black",
+            #command=lambda: redo(),
+        ).grid(row=i, column=0, sticky="n", pady=5)
         w.bind("<FocusOut>", lambda e: text_edit(e))
 
 
@@ -383,10 +397,11 @@ def toogle_is_editing():
 def undo():
     data_class.undo()
     update_master_view()
+    clear_second_detail_frame()
 def redo():
     data_class.redo()
     update_master_view()
-
+    clear_second_detail_frame()
 
 def generate_master_toolbar():
     global data_class
@@ -402,7 +417,7 @@ def generate_master_toolbar():
         activebackground="#badee2",
         activeforeground="black",
         command=lambda: toogle_is_editing(),
-    ).grid(row=0, column=0, sticky="w", pady=5, padx=5)
+    ).pack(anchor="w",side="left",padx=5)
     if len(data_class.undo_stack) > 0:
         Button(
             master_toolbar,
@@ -416,7 +431,8 @@ def generate_master_toolbar():
             activebackground="#badee2",
             activeforeground="black",
             command=lambda: undo(),
-        ).grid(row=0, column=1, padx=5, sticky="w", pady=5, columnspan=3)
+        ).pack(anchor="w",side="left",padx=5)
+        #.grid(row=0, column=1, padx=5, sticky="w", pady=5, columnspan=3)
     if len(data_class.redo_stack) > 0:
         Button(
             master_toolbar,
@@ -430,7 +446,8 @@ def generate_master_toolbar():
             activebackground="#badee2",
             activeforeground="black",
             command=lambda: redo(),
-        ).grid(row=0, column=2, padx=5, sticky="w", pady=5)
+        ).pack(anchor="w",side="left",padx=5)
+        #.grid(row=0, column=2, padx=5, sticky="w", pady=5)
 
 
 def convert_to_pdf():
@@ -578,13 +595,15 @@ help_.add_command(label="About Tk", command=None)
 # display Menu
 root.config(menu=menubar)
 
+def update_toobar():
+    for widgets in master_toolbar.winfo_children():
+        widgets.destroy()
+    generate_master_toolbar()
 
 def update_master_view():
     for widgets in second_frame.winfo_children():
         widgets.destroy()
-    for widgets in master_toolbar.winfo_children():
-        widgets.destroy()
-    generate_master_toolbar()
+    update_toobar()
     data_class.sort("name")
     master_buttons = [len(data_class.items)]
     for index, item in enumerate(data_class.items):
