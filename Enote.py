@@ -253,6 +253,9 @@ detail_scrollbar = ttk.Scrollbar(
 )
 detail_scrollbar.pack(side="right", fill="y", padx=10, pady=10)
 
+master_canvas.configure(scrollregion=detail_canvas.bbox("all"))
+detail_canvas.configure(scrollregion=detail_canvas.bbox("all"))
+
 # Configure The Canvas
 master_canvas.configure(yscrollcommand=master_scrollbar.set)
 master_canvas.bind(
@@ -290,12 +293,20 @@ def update_detail_viev(index):
     current_detail_index = index
     clear_second_detail_frame()
     items = data_class.items
+    nn = 0
+    i = 0
     for key in items[index]:
-        nn = 0
-        i = 0
         def button_pressed(e):
             k_key = str(e.widget).split(".")[-1][1:]
-            print(k_key)
+            items[index].pop(k_key)
+            data_class.register_undo()
+            update_toobar()
+            update_detail_viev(current_detail_index)
+            write_enote_items(
+                data_class.items, filename, passdata=username_and_password
+            )
+
+
 
         def text_edit(e):
             k_key = str(e.widget).split(".")[-1][1:]
@@ -328,6 +339,7 @@ def update_detail_viev(index):
                 nn += 1
         text = data_class.items[index][key]
         height = text.splitlines()
+        print(f"{i} {key}")
 
         w = tk.Text(
             second_detail_frame,
