@@ -26,7 +26,7 @@ BG_COLOR = "#346466"
 WIN_WIDTH = 600
 WIN_HEIGHT = 800
 is_editing = False
-
+current_detail_index = 0
 
 def darkstyle(root):
     """Return a dark style to the window"""
@@ -284,12 +284,18 @@ def clear_second_detail_frame():
             widgets.destroy()
 
 
-def set_detail_Viev(index):
+def update_detail_viev(index):
+    global is_editing
+    global current_detail_index
+    current_detail_index = index
     clear_second_detail_frame()
     items = data_class.items
     for key in items[index]:
         nn = 0
         i = 0
+        def button_pressed(e):
+            k_key = str(e.widget).split(".")[-1][1:]
+            print(k_key)
 
         def text_edit(e):
             k_key = str(e.widget).split(".")[-1][1:]
@@ -332,7 +338,7 @@ def set_detail_Viev(index):
         w.config(height=max(3, len(height)))
         w.insert(1.0, text)
         w.configure(bg="#28393a", fg="white")
-        w.grid(row=i, column=1, sticky="nwse", columnspan=10)
+        w.grid(row=i, column=2, sticky="nwse", columnspan=10)
 
         Button(
            second_detail_frame,
@@ -348,6 +354,23 @@ def set_detail_Viev(index):
             activeforeground="black",
             #command=lambda: redo(),
         ).grid(row=i, column=0, sticky="n", pady=5)
+        button_name = key
+        button_name=Button(
+            second_detail_frame,
+            text="DEL",
+            name = f"i{key}",
+            width=30,
+            anchor="w",
+            font=("TkHeadingFont", 15),
+            bg="red",
+            fg="white",
+            cursor="hand2",
+            #command=lambda: delete_detail_item(index),
+        )
+
+        if is_editing:
+            button_name.grid(row=i, column=1, padx=5, sticky="w", pady=5)
+            button_name.bind("<FocusIn>", lambda e: button_pressed(e))
         w.bind("<FocusOut>", lambda e: text_edit(e))
 
 
@@ -370,7 +393,7 @@ def generate_master_button(item, index):
         cursor="hand2",
         activebackground="#badee2",
         activeforeground="black",
-        command=lambda: set_detail_Viev(index),
+        command=lambda: update_detail_viev(index),
     ).grid(row=index + 2, column=int(is_editing), sticky="w", pady=5)
     if is_editing:
         Button(
@@ -392,16 +415,18 @@ def toogle_is_editing():
     global is_editing
     is_editing = not is_editing
     update_master_view()
+    update_detail_viev(current_detail_index)
 
 
 def undo():
     data_class.undo()
     update_master_view()
-    clear_second_detail_frame()
+    update_detail_viev(current_detail_index)
 def redo():
     data_class.redo()
     update_master_view()
-    clear_second_detail_frame()
+    update_detail_viev(current_detail_index)
+
 
 def generate_master_toolbar():
     global data_class
